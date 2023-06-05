@@ -824,6 +824,10 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
                           digestType, passwd, cb, ctx, Collections.emptyMap());
     }
 
+    public void method() {
+        System.out.println("method to test jacoco coverage");
+    }
+
     /**
      * Creates a new ledger asynchronously. Ledgers created with this call have
      * a separate write quorum and ack quorum size. The write quorum must be larger than
