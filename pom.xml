@@ -1309,6 +1309,8 @@
         </plugins>
       </build>
     </profile>
+
+    <!-- generate jacoco coverage report-->
     <profile>
       <id>jacoco-coverage</id>
       <activation>
@@ -1332,5 +1334,6 @@
         </plugins>
       </build>
     </profile>
+
   </profiles>
 </project>
