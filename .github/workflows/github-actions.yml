@@ -1,6 +1,9 @@
 name: Java CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -15,9 +18,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: Run the Maven verify phase
-        run: mvn --batch-mode --update-snapshots verify
-      - run: mkdir staging && cp bookkeeper-server/target/*.jar staging
-      - uses: actions/upload-artifact@v3
+        run: mvn --batch-mode --update-snapshots verify -P jacoco-coverage
+      - name: Archive surefire reports
+        uses: actions/upload-artifact@v3
         with:
-          name: Package
-          path: staging
+          name: surefire-test-report
+          path: bookkeeper-server/target/surefire-reports
+      - name: Archive jacoco coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: jacoco-coverage/target/site/jacoco-aggregate
