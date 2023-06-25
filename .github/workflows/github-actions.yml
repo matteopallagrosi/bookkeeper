@@ -14,11 +14,11 @@ jobs:
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
-          java-version: '8'
+          java-version: '11'
           distribution: 'temurin'
           cache: maven
       - name: Run the Maven verify phase
-        run: mvn --batch-mode --update-snapshots verify -P jacoco-coverage
+        run: mvn --batch-mode --update-snapshots verify -P jacoco-coverage sonar:sonar -Dsonar.token=427bae1214d7d96961a94681ae162aa19e353303
       - name: Archive surefire reports
         uses: actions/upload-artifact@v3
         with:
