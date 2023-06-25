@@ -113,7 +113,7 @@ public class BookKeeperAdminTest  {
                     count ++;
                     assertEquals(new String(expectedEntry), new String(entry.getEntry()));
                 }
-                assertTrue(count == 0);
+                assertEquals(0, count);
             }
             else {
                 //range (firstEntry, lastEntry) non valido
