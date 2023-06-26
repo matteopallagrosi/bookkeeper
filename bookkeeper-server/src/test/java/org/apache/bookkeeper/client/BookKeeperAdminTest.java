@@ -4,7 +4,6 @@ import org.apache.bookkeeper.client.BookKeeper.DigestType;
 import org.apache.bookkeeper.test.BookKeeperClusterTestCase;
 import org.apache.bookkeeper.test.ZooKeeperCluster;
 import org.junit.*;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -54,90 +53,114 @@ public class BookKeeperAdminTest  {
                 {0, 0, -1, "correctEntry".getBytes(), null},
                 {0, 0, 1, "correctEntry".getBytes(), null},
                 {0, 0, 0, "correctEntry".getBytes(), null},
-                {0, 0, -2, null, null}
+                {0, 0, -2, null, null} //l'output atteso non prevede nessuna lettura (legge 0 entry)
         });
     }
 
     //configura l'environment in cui i test verranno eseguiti (crea i server bookkeeper e zookkeeper localmente)
     @BeforeClass
-    public static void configureBookKeeperCluster() throws Exception {
+    public static void configureBookKeeperCluster() {
         bookKeeperCluster = new BookKeeperClusterTestCase(NUM_OF_BOOKIES);
         //start dei cluster bookkeeper e zookkeeper
-        bookKeeperCluster.setUp();
+        try {
+            bookKeeperCluster.setUp();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail("An exception has been thrown during environment set up");
+        }
         zooKeeperCluster = bookKeeperCluster.getzkCluster();
     }
 
     //instanzia un ledger di test e inserisce delle entries
     @Before
-    public void initializeLedger() throws BKException, IOException, InterruptedException {
-        testClient = new BookKeeper(zooKeeperCluster.getZooKeeperConnectString());
-        LedgerHandle ledger = testClient.createLedgerAdv(LEDGER_ID, ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, DIGEST_TYPE, PASSWORD, null);
+    public void initializeLedger() {
+        try {
+            testClient = new BookKeeper(zooKeeperCluster.getZooKeeperConnectString());
+            LedgerHandle ledger = testClient.createLedgerAdv(LEDGER_ID, ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, DIGEST_TYPE, PASSWORD, null);
 
-        //scrive delle entries sul ledger
-        for (int i = 0; i<NUM_ENTRIES; i++) {
-            ledger.addEntry(i, ("correctEntry").getBytes());
+            //scrive delle entries sul ledger
+            for (int i = 0; i < NUM_ENTRIES; i++) {
+                ledger.addEntry(i, ("correctEntry").getBytes());
+            }
+
+            ledger.close();
+        } catch (IOException | BKException | InterruptedException e) {
+            e.printStackTrace();
+            Assert.fail("An exception has been thrown during test initialization");
         }
-
-        ledger.close();
     }
 
 
 
     //testa la lettura sincrona di entries da un ledger
     @Test
-    public void testReadEntries() throws BKException, IOException, InterruptedException {
-        BookKeeperAdmin bookKeeperAdmin = new BookKeeperAdmin(zooKeeperCluster.getZooKeeperConnectString());
+    public void testReadEntries() {
+        try (BookKeeperAdmin bookKeeperAdmin = new BookKeeperAdmin(zooKeeperCluster.getZooKeeperConnectString())) {
 
-        if (ledgerId < 0) {
-            assertThrows(expectedException, () -> {
-                bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
-            });
-        }
-        else if (firstEntry < 0) {
-            assertThrows(expectedException, () -> {
-                bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
-            });
-        }
-        else {
-            //procede a leggere le entries
-            Iterable<LedgerEntry> entries = bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
-            if (lastEntry>=firstEntry || lastEntry == -1) {
-                for (LedgerEntry entry: entries) {
-                    assertEquals(new String(expectedEntry), new String(entry.getEntry()));
-                }
-            }
-           //non legge nessuna entry
-            else if (lastEntry < -1) {
-                int count = 0;
-                for (LedgerEntry entry: entries) {
-                    count ++;
-                    assertEquals(new String(expectedEntry), new String(entry.getEntry()));
-                }
-                assertEquals(0, count);
-            }
-            else {
-                //range (firstEntry, lastEntry) non valido
+            if (ledgerId < 0) {
                 assertThrows(expectedException, () -> {
-                    for (LedgerEntry entry: entries) {
+                    bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
+                });
+            } else if (firstEntry < 0) {
+                assertThrows(expectedException, () -> {
+                    bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
+                });
+            } else {
+                //procede a leggere le entries
+                Iterable<LedgerEntry> entries = bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
+
+                if (lastEntry >= firstEntry || lastEntry == -1) {
+                    for (LedgerEntry entry : entries) {
                         assertEquals(new String(expectedEntry), new String(entry.getEntry()));
                     }
-                });
+                }
+                //non legge nessuna entry
+                else if (lastEntry < -1) {
+                    int count = 0;
+                    for (LedgerEntry entry : entries) {
+                        count++;
+                        assertEquals(new String(expectedEntry), new String(entry.getEntry()));
+                    }
+                    assertEquals(0, count);
+                } else {
+                    //range (firstEntry, lastEntry) non valido
+                    assertThrows(expectedException, () -> {
+                        for (LedgerEntry entry : entries) {
+                            System.err.println(entry.getEntryId());
+                        }
+                    });
+                }
             }
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail("Exception is not expected");
         }
     }
 
 
     //rimuove il ledger precedentemente creato
     @After
-    public void deleteLedgers() throws BKException, InterruptedException {
-        testClient.deleteLedger(LEDGER_ID);
-        testClient.close();
+    public void deleteLedgers() {
+        try {
+            testClient.deleteLedger(LEDGER_ID);
+            testClient.close();
+        } catch (InterruptedException  | BKException e) {
+            e.printStackTrace();
+            Assert.fail("An exception has been thrown while deleting test client");
+        }
     }
 
 
     //rimuove i cluster creati
     @AfterClass
-    public static void clearEnvironment() throws Exception {
-        bookKeeperCluster.tearDown();
+    public static void clearEnvironment() {
+        try {
+            bookKeeperCluster.tearDown();
+        } catch (Exception e ) {
+            e.printStackTrace();
+            Assert.fail("An exception has been thrown while cleaning environment");
+        }
     }
 }
