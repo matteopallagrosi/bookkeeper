@@ -1,11 +1,5 @@
 package org.apache.bookkeeper.client;
 
-import org.apache.bookkeeper.client.BookKeeperAdmin;
-import org.apache.bookkeeper.client.BookKeeper;
-import org.apache.bookkeeper.client.LedgerFragment;
-import org.apache.bookkeeper.client.LedgerHandle;
-import org.apache.bookkeeper.conf.ClientConfiguration;
-import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.bookkeeper.test.BookKeeperClusterTestCase;
 import org.apache.bookkeeper.test.ZooKeeperCluster;
@@ -15,22 +9,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.apache.bookkeeper.client.api.LedgerMetadata;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class BookKeeperNewTest {
     private static final int NUM_BOOKIES = 10;
-    private static final int NUM_FRAGMENTS = 3;
-    private static final int ENSEMBLE_SIZE = 3;
-    private static final int QUORUM_SIZE = 2;
+    private static final int ENS_SIZE = 3;
+    private static final int WRITE_QUORUM = 3;
+    private static final int ACK_QUORUM = 2;
 
     private BookieServer leaderBookie;
     private BookKeeperAdmin bookKeeperAdmin;
@@ -70,45 +60,41 @@ public class BookKeeperNewTest {
 
     @Test
     public void testReplicateLedgerFragment() throws Exception {
-        // Create a ledger
+        //crea un ledger
         BookKeeper bk = new BookKeeper(zooKeeperCluster.getZooKeeperConnectString());
-        LedgerHandle ledger = bk.createLedger(NUM_FRAGMENTS, ENSEMBLE_SIZE, QUORUM_SIZE, BookKeeper.DigestType.MAC, "testPassword".getBytes());
+        LedgerHandle ledger = bk.createLedger(ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, BookKeeper.DigestType.MAC, "testPassword".getBytes());
 
-        // Write some entries to the ledger
+        //scrive delle entry sul ledger
         int numEntries = 100;
         for (int i = 0; i < numEntries; i++) {
             ledger.addEntry(("Entry " + i).getBytes());
         }
 
+        //il ledger deve essere chiuso affinchè lastEntryId sia correttamente disponibile
         ledger.close();
 
-        // Fetch the ledger fragment metadata
+        //recupera i metadati del ledger
         LedgerMetadata ledgerMetadata = ledger.getLedgerMetadata();
         long lastEntryId = ledgerMetadata.getLastEntryId();
-        long ledgerId = ledger.getId();
+        assertTrue(lastEntryId != -1);
 
-        // Create a callback to handle read entry failures
+        //crea una callback per gestire le letture fallite
         BiConsumer<Long, Long> onReadEntryFailureCallback = (entryId, bookieId) -> {
-            System.out.println("Failed to read entry " + entryId + " from bookie " + bookieId);
+            System.err.println("Failed to read entry " + entryId + " from bookie " + bookieId);
             // Custom handling logic for read entry failures
         };
 
-        // Replicate the ledger fragment to other bookies using BookKeeperAdmin
-        CountDownLatch replicationLatch = new CountDownLatch(NUM_BOOKIES - 1);
         Set<Integer> indexes = new HashSet<Integer>();
-        for (int i = 0 ; i < ENSEMBLE_SIZE; i++) {
+        for (int i = 0; i < WRITE_QUORUM; i++) {
             indexes.add(i);
         }
 
         bookKeeperAdmin.replicateLedgerFragment(ledger, new LedgerFragment(ledger, 0, lastEntryId, indexes), onReadEntryFailureCallback);
 
-        // Verify that the ledger fragment has been replicated to all bookies
-        /*for () {
-            long numFragments = ledger.getNumFragments();
-            assertEquals("Incorrect number of fragments", NUM_FRAGMENTS, numFragments);
-        }*/
+        //tutte le entry devono essere state replicate su un numero di bookies >= ACKQUORUM
         ledgerMetadata = ledger.getLedgerMetadata();
-        return;
-
+        for (int i = 0; i < numEntries; i++) {
+            assertTrue("Number of bookies on which entries have been replicated is < ACKQUORUM", ledgerMetadata.getEnsembleAt(i).size() >= ACK_QUORUM);
+        }
     }
 }
