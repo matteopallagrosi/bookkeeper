@@ -131,6 +131,7 @@ public class BookKeeperAdminSecondTest {
 
             //l'handle creato ha un id non valido (ossia -1)
             lh = new LedgerHandle(context, -1, versionedMetadata, DigestType.CRC32, "".getBytes(), WriteFlag.NONE);
+
         } catch(Exception e) {
             e.printStackTrace();
             Assert.fail("An exception has been thrown during creation test parameters");
