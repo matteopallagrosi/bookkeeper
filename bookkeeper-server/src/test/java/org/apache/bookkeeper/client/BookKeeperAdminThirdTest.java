@@ -1,8 +1,7 @@
 package org.apache.bookkeeper.client;
 
 import org.apache.bookkeeper.client.api.LedgerEntries;
-import org.apache.bookkeeper.meta.HierarchicalLedgerManager;
-import org.apache.bookkeeper.meta.HierarchicalLedgerManagerFactory;
+import org.apache.bookkeeper.meta.*;
 import org.apache.bookkeeper.test.BookKeeperClusterTestCase;
 import org.apache.bookkeeper.test.ZooKeeperCluster;
 import org.apache.bookkeeper.test.ZooKeeperUtil;
@@ -12,8 +11,6 @@ import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.api.LedgerMetadata;
 import org.apache.bookkeeper.client.api.DigestType;
 import org.apache.bookkeeper.conf.ClientConfiguration;
-import org.apache.bookkeeper.meta.LedgerManager;
-import org.apache.bookkeeper.meta.MetadataDrivers;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.client.LedgerEntry;
 import org.junit.After;
@@ -66,7 +63,7 @@ public class BookKeeperAdminThirdTest {
     public void testAreEntriesOfLedgerStoredInTheBookie() throws InterruptedException, BKException {
         // Create a ledger
         LedgerHandle ledger = bookKeeper.createLedger(ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, BookKeeper.DigestType.CRC32, "testPassword".getBytes());
-        HierarchicalLedgerManager ledgerManager = new HierarchicalLedgerManager(bookKeeper.getConf(), zooKeeperCluster.getZooKeeperClient());
+        LedgerManager ledgerManager = LedgerManagerUtils.getHierarchicalLedgerManager(bookKeeper.getConf(), zooKeeperCluster.getZooKeeperClient());
 
         //scrive delle entry sul leddger
         for (int i = 0; i < NUM_ENTRIES; i++) {

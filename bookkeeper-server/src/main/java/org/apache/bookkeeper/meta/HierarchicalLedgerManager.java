@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * @see LongHierarchicalLedgerManager
  * @see LegacyHierarchicalLedgerManager
  */
-public class HierarchicalLedgerManager extends AbstractHierarchicalLedgerManager {
+class HierarchicalLedgerManager extends AbstractHierarchicalLedgerManager {
     static final Logger LOG = LoggerFactory.getLogger(HierarchicalLedgerManager.class);
 
     LegacyHierarchicalLedgerManager legacyLM;
