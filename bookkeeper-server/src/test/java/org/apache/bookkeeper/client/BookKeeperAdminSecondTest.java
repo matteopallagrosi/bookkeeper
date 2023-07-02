@@ -188,7 +188,7 @@ public class BookKeeperAdminSecondTest {
         };
     }
 
-    enum Instance {
+    public enum Instance {
         VALID, INVALID, NULL
     }
 
