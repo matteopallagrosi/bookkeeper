@@ -101,7 +101,7 @@ public class BookKeeperAdminSecondTest {
     //ritorna un ledger handle valido, configurato tramite un client di test
     private LedgerHandle createValidLedgerHandle() {
         LedgerHandle lh = null;
-        try {
+        try  {
             BookKeeper testClient = new BookKeeper(zooKeeperCluster.getZooKeeperConnectString());
             lh = testClient.createLedger(ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, BookKeeper.DigestType.MAC, "password".getBytes());
 
