@@ -56,6 +56,7 @@ import org.apache.bookkeeper.bookie.MockUncleanShutdownDetection;
 import org.apache.bookkeeper.bookie.ReadOnlyBookie;
 import org.apache.bookkeeper.bookie.UncleanShutdownDetection;
 import org.apache.bookkeeper.bookie.UncleanShutdownDetectionImpl;
+import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.BookKeeperTestClient;
 import org.apache.bookkeeper.common.allocator.ByteBufAllocatorWithOomHandler;
 import org.apache.bookkeeper.common.allocator.PoolingPolicy;
@@ -82,6 +83,7 @@ import org.apache.bookkeeper.util.DiskChecker;
 import org.apache.bookkeeper.util.PortManager;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import org.eclipse.jetty.server.Server;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -110,7 +112,7 @@ public class BookKeeperClusterTestCase {
     protected final List<ServerTester> servers = new LinkedList<>();
 
     protected int numBookies;
-    protected BookKeeperTestClient bkc;
+    public BookKeeperTestClient bkc;
     protected boolean useUUIDasBookieId = true;
 
     /*
@@ -118,8 +120,8 @@ public class BookKeeperClusterTestCase {
      * set to true in this server config. So bookies in this test process would
      * bind to loopback address.
      */
-    protected final ServerConfiguration baseConf = TestBKConfiguration.newServerConfiguration();
-    protected final ClientConfiguration baseClientConf = TestBKConfiguration.newClientConfiguration();
+    public final ServerConfiguration baseConf = TestBKConfiguration.newServerConfiguration();
+    public final ClientConfiguration baseClientConf = TestBKConfiguration.newClientConfiguration();
     private final ByteBufAllocatorWithOomHandler allocator = BookieResources.createAllocator(baseConf);
 
     private boolean isAutoRecoveryEnabled;
@@ -159,6 +161,18 @@ public class BookKeeperClusterTestCase {
 
     public ZooKeeperCluster getzkCluster() {
         return this.zkUtil;
+    }
+
+    public ServerConfiguration getConfiguration() {
+        return  baseConf;
+    }
+
+    public ClientConfiguration getClientConf() {
+        return baseClientConf;
+    }
+
+    public BookKeeperTestClient getClient() {
+        return bkc;
     }
 
 
@@ -367,7 +381,7 @@ public class BookKeeperClusterTestCase {
                 .collect(Collectors.toList());
     }
 
-    protected BookieId addressByIndex(int index) throws Exception {
+    public BookieId addressByIndex(int index) throws Exception {
         return servers.get(index).getServer().getBookieId();
     }
 
