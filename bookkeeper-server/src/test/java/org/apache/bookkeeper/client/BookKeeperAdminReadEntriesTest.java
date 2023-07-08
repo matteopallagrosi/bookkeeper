@@ -15,7 +15,7 @@ import java.util.Collection;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(value=Parameterized.class)
-public class BookKeeperAdminTest  {
+public class BookKeeperAdminReadEntriesTest {
 
     private static final int NUM_OF_BOOKIES = 5;
     private static final int LEDGER_ID = 0;
@@ -35,7 +35,7 @@ public class BookKeeperAdminTest  {
     private byte[] expectedEntry;
     private static BookKeeper testClient;
 
-    public BookKeeperAdminTest(long ledgerId, long firstEntry, long lastEntry, byte[] expectedValue, Class<? extends Exception> expectedException) {
+    public BookKeeperAdminReadEntriesTest(long ledgerId, long firstEntry, long lastEntry, byte[] expectedValue, Class<? extends Exception> expectedException) {
         this.ledgerId = ledgerId;
         this.firstEntry = firstEntry;
         this.lastEntry = lastEntry;

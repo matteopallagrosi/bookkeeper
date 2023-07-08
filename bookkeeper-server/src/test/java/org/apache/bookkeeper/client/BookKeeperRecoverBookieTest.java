@@ -5,14 +5,11 @@ import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.test.BookKeeperClusterTestCase;
-import org.apache.bookkeeper.test.ZooKeeperCluster;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.internal.matchers.Null;
 
-import java.io.IOException;
 import java.util.*;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -21,7 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(value= Parameterized.class)
-public class BookKeeperFourthTest {
+public class BookKeeperRecoverBookieTest {
     private static final int NUM_BOOKIES = 5;
     private static final int NUM_ENTRIES = 100;
     private static BookKeeperClusterTestCase bookKeeperCluster;
@@ -44,7 +41,7 @@ public class BookKeeperFourthTest {
     boolean equals;
     Exception expectedException;
 
-    public BookKeeperFourthTest(LedgerState ledgerState, BookiesState bookiesState, boolean dryrun, boolean skipOpenLedger, EnsembleState ensState, Exception expectedException) {
+    public BookKeeperRecoverBookieTest(LedgerState ledgerState, BookiesState bookiesState, boolean dryrun, boolean skipOpenLedger, EnsembleState ensState, Exception expectedException) {
         this.dryrun = dryrun;
         this.skipOpenLedger = skipOpenLedger;
         this.expectedException = expectedException;

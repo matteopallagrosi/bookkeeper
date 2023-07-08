@@ -12,13 +12,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.MockitoAnnotations;
 
-import java.awt.print.Book;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -27,7 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(value= Parameterized.class)
-public class BookKeeperAdminThirdTest {
+public class BookKeeperAdminEntriesStoredTest {
     private static final int NUM_BOOKIES = 5;
     private static final int NUM_ENTRIES = 100;
     private static final int ENS_SIZE = 3;
@@ -47,7 +45,7 @@ public class BookKeeperAdminThirdTest {
     private Exception expectedException;
 
 
-    public BookKeeperAdminThirdTest(Instance ledgerHandle , Instance address , Instance manager , Object expectedOutput , Exception expectedException) throws IOException {
+    public BookKeeperAdminEntriesStoredTest(Instance ledgerHandle , Instance address , Instance manager , Object expectedOutput , Exception expectedException) throws IOException {
         MockitoAnnotations.initMocks(this);
         switch (ledgerHandle) {
             case VALID : {

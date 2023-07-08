@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(value= Parameterized.class)
-public class BookKeeperAdminSecondTest {
+public class BookKeeperAdminReplicateFragmentTest {
     private static final int NUM_BOOKIES = 10;
     private static final int ENS_SIZE = 3;
     private static final int WRITE_QUORUM = 3;
@@ -37,7 +37,7 @@ public class BookKeeperAdminSecondTest {
     private BiConsumer<Long, Long> onReadEntryFailureCallback;  //i due Long sono l'id del ledger e della entry la cui lettura non è andata a buon fine
     private Exception expectedException;
 
-    public BookKeeperAdminSecondTest(Instance lh, Instance lf, Instance onReadEntryFailureCallback, Exception exception) {
+    public BookKeeperAdminReplicateFragmentTest(Instance lh, Instance lf, Instance onReadEntryFailureCallback, Exception exception) {
         MockitoAnnotations.initMocks(this);
         this.expectedException = exception;
         switch(lh) {
