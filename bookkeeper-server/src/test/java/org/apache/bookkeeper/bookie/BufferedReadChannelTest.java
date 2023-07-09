@@ -2,6 +2,7 @@ package org.apache.bookkeeper.bookie;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -27,9 +28,13 @@ public class BufferedReadChannelTest {
     int length;
     int expectedOutput; //numero di byte letti
     Exception expectedException;
+    //output override method
+    int overrideOutput;
+    Exception overrideException;
 
 
-    public BufferedReadChannelTest(Buffer dest_capacity , long position , int length , int output , Exception expectedException) {
+
+    public BufferedReadChannelTest(Buffer dest_capacity , long position , int length , int output , Exception expectedException, int overrideOutput , Exception overrideException) {
         this.pos = position;
         this.length = length;
 
@@ -50,6 +55,9 @@ public class BufferedReadChannelTest {
 
         this.expectedOutput = output;
         this.expectedException = expectedException;
+
+        this.overrideOutput = overrideOutput;
+        this.overrideException = overrideException;
     }
 
 
@@ -57,64 +65,64 @@ public class BufferedReadChannelTest {
     public static Collection<Object[]> getParameters() {
         return Arrays.asList(new Object[][]{
                 // dest, pos , length, expectedOutput, expectedException
-                {Buffer.SUFFICIENT , 0 , -1 , 0 , null},
-                {Buffer.SUFFICIENT , 0 , 0 , 0 , null},
-                {Buffer.SUFFICIENT , 0 , NUM_BYTES , NUM_BYTES , null},
-                {Buffer.SUFFICIENT , 0 , NUM_BYTES + 1 , NUM_BYTES , null},
+                {Buffer.SUFFICIENT , 0 , -1 , 0 , null, 0 , null},
+                {Buffer.SUFFICIENT , 0 , 0 , 0 , null, 0 , null},
+                {Buffer.SUFFICIENT , 0 , NUM_BYTES , NUM_BYTES , null, NUM_BYTES , null},
+                {Buffer.SUFFICIENT , 0 , NUM_BYTES + 1 , NUM_BYTES , null, 0 , new IOException()}, //diverso
 
-                {Buffer.SUFFICIENT , -1 , -1 , 0 , null},
-                {Buffer.SUFFICIENT , -1 , 0 , 0 , null},
-                {Buffer.SUFFICIENT , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException()},
-                {Buffer.SUFFICIENT , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException()},
+                {Buffer.SUFFICIENT , -1 , -1 , 0 , null , 0 , null},
+                {Buffer.SUFFICIENT , -1 , 0 , 0 , null , 0 , null},
+                {Buffer.SUFFICIENT , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException() , 0 , new IllegalArgumentException()},
+                {Buffer.SUFFICIENT , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException() , 0  , new IllegalArgumentException()},
 
-                {Buffer.SUFFICIENT , NUM_BYTES - 1 , -1 , 0 , null},
-                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 0 , 0 , null},
-                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 1 , 1 , null},
-                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 2 , 1 , null},
+                {Buffer.SUFFICIENT , NUM_BYTES - 1 , -1 , 0 , null , 0 , null},
+                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 0 , 0 , null , 0 , null},
+                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 1 , 1 , null , 1 , null},
+                {Buffer.SUFFICIENT , NUM_BYTES - 1 , 2 , 1 , null, 0 , new IOException()}, //diverso
 
-                {Buffer.SUFFICIENT , NUM_BYTES , -1 , -1 , null},
-                {Buffer.SUFFICIENT , NUM_BYTES , 0 , -1 , null},
-                {Buffer.SUFFICIENT , NUM_BYTES , 1 , -1 , null},
-
-
-                {Buffer.NOT_SUFFICIENT , 0 , -1 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , 0 , 0 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , 0 , NUM_BYTES , 0 , new IndexOutOfBoundsException()},
-                {Buffer.NOT_SUFFICIENT , 0 , NUM_BYTES + 1 , 0 , new IndexOutOfBoundsException()},
-
-                {Buffer.NOT_SUFFICIENT , -1 , -1 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , -1 , 0 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException()},
-                {Buffer.NOT_SUFFICIENT , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException()},
-
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , -1 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 0 , 0 , null},
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 1 , 1 , null},
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 2 , 1 , null},
-
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES , -1 , -1 , null},
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES , 0 , -1 , null},
-                {Buffer.NOT_SUFFICIENT , NUM_BYTES , 1 , -1 , null},
+                {Buffer.SUFFICIENT , NUM_BYTES , -1 , -1 , null , 0 , new IOException()}, //diverso
+                {Buffer.SUFFICIENT , NUM_BYTES , 0 , -1 , null , 0 , new IOException()},  //diverso
+                {Buffer.SUFFICIENT , NUM_BYTES , 1 , -1 , null , 0 , new IOException()},  //diverso
 
 
-                {Buffer.NULL , 0 , -1 , 0 , null},
-                {Buffer.NULL , 0 , 0 , 0 , null},
-                {Buffer.NULL , 0 , NUM_BYTES , 0 , new NullPointerException()},
-                {Buffer.NULL , 0 , NUM_BYTES + 1 , 0 , new NullPointerException()},
+                {Buffer.NOT_SUFFICIENT , 0 , -1 , 0 , null , 0  , null},
+                {Buffer.NOT_SUFFICIENT , 0 , 0 , 0 , null , 0 , null},
+                {Buffer.NOT_SUFFICIENT , 0 , NUM_BYTES , 0 , new IndexOutOfBoundsException() , 0 , new IOException()},   //diverso
+                {Buffer.NOT_SUFFICIENT , 0 , NUM_BYTES + 1 , 0 , new IndexOutOfBoundsException() , 0 , new IOException()}, //diverso
 
-                {Buffer.NULL , -1 , -1 , 0 , null},
-                {Buffer.NULL , -1 , 0 , 0 , null},
-                {Buffer.NULL , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException()},
-                {Buffer.NULL , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException()},
+                {Buffer.NOT_SUFFICIENT , -1 , -1 , 0 , null , 0 , null},
+                {Buffer.NOT_SUFFICIENT , -1 , 0 , 0 , null , 0 , null},
+                {Buffer.NOT_SUFFICIENT , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException() , 0 , new IllegalArgumentException()},
+                {Buffer.NOT_SUFFICIENT , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException() , 0 , new IllegalArgumentException()},
 
-                {Buffer.NULL , NUM_BYTES - 1 , -1 , 0 , null},
-                {Buffer.NULL , NUM_BYTES - 1 , 0 , 0 , null},
-                {Buffer.NULL , NUM_BYTES - 1 , 1 , 0 , new NullPointerException()},
-                {Buffer.NULL , NUM_BYTES - 1 , 2 , 0 , new NullPointerException()},
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , -1 , 0 , null , 0 , null},
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 0 , 0 , null , 0 ,null},
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 1 , 1 , null , 1 , null},
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES - 1 , 2 , 1 , null , 0 , new IOException()}, //diverso
 
-                {Buffer.NULL , NUM_BYTES , -1 , -1 , null},
-                {Buffer.NULL , NUM_BYTES , 0 , -1 , null},
-                {Buffer.NULL , NUM_BYTES , 1 , -1 , null},
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES , -1 , -1 , null , 0 , null}, //prima controlla la length e poi la posizione nel caso override
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES , 0 , -1 , null , 0 , null}, //prima controlla la length e poi la posizione nel caso override
+                {Buffer.NOT_SUFFICIENT , NUM_BYTES , 1 , -1 , null , 0 , new IOException()}, //diverso
+
+
+                {Buffer.NULL , 0 , -1 , 0 , null , 0, null},
+                {Buffer.NULL , 0 , 0 , 0 , null , 0 , null},
+                {Buffer.NULL , 0 , NUM_BYTES , 0 , new NullPointerException() , 0, new NullPointerException()},
+                {Buffer.NULL , 0 , NUM_BYTES + 1 , 0 , new NullPointerException() , 0 , new NullPointerException()},
+
+                {Buffer.NULL , -1 , -1 , 0 , null, 0 , null},
+                {Buffer.NULL , -1 , 0 , 0 , null , 0 , null},
+                {Buffer.NULL , -1 , NUM_BYTES + 1 , 0 , new IllegalArgumentException() , 0 , new IllegalArgumentException()},
+                {Buffer.NULL , -1 , NUM_BYTES + 2 , 0 , new IllegalArgumentException() , 0 , new IllegalArgumentException()},
+
+                {Buffer.NULL , NUM_BYTES - 1 , -1 , 0 , null , 0 , null},
+                {Buffer.NULL , NUM_BYTES - 1 , 0 , 0 , null , 0 , null},
+                {Buffer.NULL , NUM_BYTES - 1 , 1 , 0 , new NullPointerException() , 0 , new NullPointerException()},
+                {Buffer.NULL , NUM_BYTES - 1 , 2 , 0 , new NullPointerException() , 0 , new NullPointerException()},
+
+                {Buffer.NULL , NUM_BYTES , -1 , -1 , null , 0 , null}, //nel caso override controlla prima length < 0
+                {Buffer.NULL , NUM_BYTES , 0 , -1 , null , 0 , null},  //nel caso override controlla prima length < 0
+                {Buffer.NULL , NUM_BYTES , 1 , -1 , null , 0 , new NullPointerException()}, //nel caso override non controlla pos > EOF
         });
     }
 
@@ -179,14 +187,51 @@ public class BufferedReadChannelTest {
         }
     }
 
+    //testo l'ovveride del metodo read() in BufferedChannel (il comportamento atteso è diverso con alcune configurazioni)
+    @Test
+    public void readWriteBufferTest() {
+        try  {
+            File file = new File(PATH);
+            FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
+
+
+            BufferedChannel channel = new BufferedChannel(UnpooledByteBufAllocator.DEFAULT , fileChannel , 100);
+
+            //scrive dei byte sul buffer
+            ByteBuf src = Unpooled.buffer(100);
+            src.writeBytes("test".getBytes());
+
+            channel.write(src);
+
+            //testo la read
+            int numRead = channel.read(this.dest, this.pos, this.length);
+
+            //testo che il corretto numero di bytes sia stato letto
+            assertEquals(overrideOutput, numRead);
+
+            byte[] actualBytes = null;
+            if (this.dest != null) {
+                actualBytes = new byte[this.dest.readableBytes()];
+                this.dest.readBytes(actualBytes);
+            }
+
+            if (numRead == NUM_BYTES) {
+                //testo che i bytes inseriti siano stati letti correttamente
+                assertArrayEquals(TEST_BYTES, actualBytes);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            assertThat(e, instanceOf(overrideException.getClass()));
+        }
+    }
+
     @AfterClass
     public static void clearEnvironment() {
         deleteTestFile();
     }
 
-
     public static void deleteTestFile() {
-        File file = new File("src/test/resources/test_buffered_channel.txt");
+        File file = new File(PATH);
         boolean fileDeleted = file.delete();
         assertTrue("Error while deleting test file" , fileDeleted);
     }
