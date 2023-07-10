@@ -64,7 +64,7 @@ public class BufferedReadChannelTest {
     @Parameterized.Parameters
     public static Collection<Object[]> getParameters() {
         return Arrays.asList(new Object[][]{
-                // dest, pos , length, expectedOutput, expectedException
+                // dest, pos , length, expectedOutput, expectedException, overrideOutput, overrideException
                 {Buffer.SUFFICIENT , 0 , -1 , 0 , null, 0 , null},
                 {Buffer.SUFFICIENT , 0 , 0 , 0 , null, 0 , null},
                 {Buffer.SUFFICIENT , 0 , NUM_BYTES , NUM_BYTES , null, NUM_BYTES , null},
