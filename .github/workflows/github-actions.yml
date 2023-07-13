@@ -43,6 +43,11 @@ jobs:
         with:
           name: surefire-test-report
           path: bookkeeper-server/target/surefire-reports
+      - name: Archive failsafe IT reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: failsafe-IT-report
+          path: bookkeeper-server/target/failsafe-reports
       - name: Archive jacoco coverage
         uses: actions/upload-artifact@v3
         with:
