@@ -72,7 +72,6 @@
     <module>native-io</module>
     <module>testtools</module>
     <module>jacoco-coverage</module>
-    <module>integration-tests</module>
 
   </modules>
   <mailingLists>
