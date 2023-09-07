@@ -67,6 +67,14 @@ public class BookKeeperAdminReplicateFragmentTest {
                 this.ledgerFragment = null;
                 break;
             }
+            case VALID_NOT_ADHERING: {
+                this.ledgerFragment= createValidNotAdheringTypeFragment();
+                break;
+            }
+            case VALID_NULLTYPE: {
+                this.ledgerFragment = createValidNullTypeFragment();
+                break;
+            }
         }
         switch(onReadEntryFailureCallback) {
             case VALID: {
@@ -91,10 +99,14 @@ public class BookKeeperAdminReplicateFragmentTest {
                 {Instance.VALID, Instance.VALID , Instance.VALID, null},
                 {Instance.INVALID , Instance.VALID , Instance.VALID, new Exception()},
                 {Instance.NULL, Instance.VALID , Instance.VALID, new NullPointerException()} ,
-               {Instance.VALID , Instance.INVALID , Instance.VALID, new Exception()},
-               {Instance.VALID , Instance.NULL , Instance.VALID, new NullPointerException()},
+                {Instance.VALID , Instance.INVALID , Instance.VALID, new Exception()},
+                {Instance.VALID , Instance.NULL , Instance.VALID, new NullPointerException()},
                 {Instance.VALID , Instance.VALID , Instance.INVALID, null},
-                {Instance.VALID , Instance.VALID , Instance.NULL, null}
+                {Instance.VALID , Instance.VALID , Instance.NULL, null},
+
+                //casi di test aggiunti per aumentare coverage
+                {Instance.VALID, Instance.VALID_NOT_ADHERING, Instance.VALID, new BKException.BKLedgerRecoveryException()}, //l'ensemble non aderisce alla placement policy
+                {Instance.VALID, Instance.VALID_NULLTYPE, Instance.VALID, new BKException.BKLedgerRecoveryException()}, //il fragment non ha una policy di replicazione associata
         });
     }
 
@@ -188,8 +200,20 @@ public class BookKeeperAdminReplicateFragmentTest {
         };
     }
 
+    private LedgerFragment createValidNotAdheringTypeFragment() {
+        LedgerFragment fragment = createValidLedgerFragment();
+        fragment.setReplicateType(LedgerFragment.ReplicateType.DATA_NOT_ADHERING_PLACEMENT);
+        return fragment;
+    }
+
+    private LedgerFragment createValidNullTypeFragment() {
+        LedgerFragment fragment = createValidLedgerFragment();
+        fragment.setReplicateType(null);
+        return fragment;
+    }
+
     public enum Instance {
-        VALID, INVALID, NULL
+        VALID, INVALID, NULL, VALID_NOT_ADHERING, VALID_NULLTYPE;
     }
 
     //configura l'environment in cui i test verranno eseguiti (crea i server bookkeeper e zookkeeper localmente)
@@ -213,7 +237,6 @@ public class BookKeeperAdminReplicateFragmentTest {
         } catch (IOException | InterruptedException | BKException e) {
             e.printStackTrace();
             Assert.fail("Error during admin initialization");
-
         }
     }
 
@@ -233,6 +256,7 @@ public class BookKeeperAdminReplicateFragmentTest {
                 assertTrue("Number of bookies on which entries have been replicated is < ACKQUORUM", ledgerMetadata.getEnsembleAt(i).size() >= ACK_QUORUM);
             }
         } catch(Exception e) {
+            e.printStackTrace();
             assertThat(e, instanceOf(expectedException.getClass()));
         }
     }

@@ -3,7 +3,10 @@ package org.apache.bookkeeper.client;
 import org.apache.bookkeeper.client.BookKeeper.DigestType;
 import org.apache.bookkeeper.test.BookKeeperClusterTestCase;
 import org.apache.bookkeeper.test.ZooKeeperCluster;
+import org.apache.commons.collections4.functors.ExceptionPredicate;
 import org.junit.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -11,8 +14,14 @@ import org.junit.runners.Parameterized.Parameters;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.*;
 
 @RunWith(value=Parameterized.class)
 public class BookKeeperAdminReadEntriesTest {
@@ -49,11 +58,15 @@ public class BookKeeperAdminReadEntriesTest {
         return Arrays.asList(new Object[][]{
                 // ledgerId, firstEntry, lastEntry, expectedValue
                 {-1, 0, 1, null, IllegalArgumentException.class},
-                {0, -1, 0, null, IllegalArgumentException.class},
-                {0, 0, -1, "correctEntry".getBytes(), null},
-                {0, 0, 1, "correctEntry".getBytes(), null},
-                {0, 0, 0, "correctEntry".getBytes(), null},
-                {0, 0, -2, null, null} //l'output atteso non prevede nessuna lettura (legge 0 entry)
+                {LEDGER_ID, -1, 0, null, IllegalArgumentException.class},
+                {LEDGER_ID, 0, -1, "correctEntry".getBytes(), null},
+                {LEDGER_ID, 0, 1, "correctEntry".getBytes(), null},
+                {LEDGER_ID, 0, 0, "correctEntry".getBytes(), null},
+                {LEDGER_ID, 0, -2, null, null}, //l'output atteso non prevede nessuna lettura (legge 0 entry)
+
+                //casi di test aggiunti per aumentare la coverage
+                {LEDGER_ID + 1, 0, -1, "correctEntry".getBytes(), RuntimeException.class}, //tentativo di lettura da ledger non esistente
+                {LEDGER_ID, 0, NUM_ENTRIES, "correctEntry".getBytes(), null}, //tentativo di lettura entry non esistente
         });
     }
 
@@ -90,8 +103,6 @@ public class BookKeeperAdminReadEntriesTest {
         }
     }
 
-
-
     //testa la lettura sincrona di entries da un ledger
     @Test
     public void testReadEntries() {
@@ -110,8 +121,48 @@ public class BookKeeperAdminReadEntriesTest {
                 Iterable<LedgerEntry> entries = bookKeeperAdmin.readEntries(this.ledgerId, this.firstEntry, this.lastEntry);
 
                 if (lastEntry >= firstEntry || lastEntry == -1) {
-                    for (LedgerEntry entry : entries) {
+                    //codice modificato per aumentare coverage
+                    /*for (LedgerEntry entry : entries) {
                         assertEquals(new String(expectedEntry), new String(entry.getEntry()));
+                    }*/
+                    try {
+                        BookKeeperAdmin.LedgerEntriesIterator entriesIterator = (BookKeeperAdmin.LedgerEntriesIterator) entries.iterator();
+                        while (entriesIterator.hasNext()) {
+                            //verifico che richiamando la hasNext l'entry non venga "consumata" ma è ancora possibile leggerla
+                            assertTrue(entriesIterator.hasNext());
+                            LedgerEntry currentEntry = entriesIterator.next();
+                            assertEquals(new String(expectedEntry), new String(currentEntry.getEntry()));
+                        }
+                        //linea di codice aggiunta per aumentare coverage
+                        //se tento di leggere un'ulteriore entry mi aspetto che mi venga sollevata una eccezione (non ci sono più entry da leggere)
+                        try {
+                            entriesIterator.next();
+                        } catch(Exception e) {
+                            e.printStackTrace();
+                            assertThat(e, instanceOf(NoSuchElementException.class));
+                        }
+                        //porzione di codice aggiunta per aumentare coverage
+                        //forzo la richiesta di una ulteriore entry manipolando appositamente i parametri nextEntry e lastAddConfirmed dell'iteratore,
+                        //per simulare la lettura di entry non esistente
+                        //vengono testate entrambe le possibilità (entry con id valido ed esistente ed entry con id non valido)
+                        try {
+                            entriesIterator.nextEntryId = NUM_ENTRIES;
+                            entriesIterator.handle.lastAddConfirmed = NUM_ENTRIES;
+                            entriesIterator.hasNext();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            assertThat(e, instanceOf(RuntimeException.class));
+                        }
+                        try {
+                            entriesIterator.nextEntryId = -1;
+                            entriesIterator.hasNext();
+                        } catch(Exception e) {
+                            e.printStackTrace();
+                            assertThat(e, instanceOf(RuntimeException.class));
+                        }
+                    } catch(Exception e) {
+                        e.printStackTrace();
+                        assertThat(e, instanceOf(expectedException));
                     }
                 }
                 //non legge nessuna entry
