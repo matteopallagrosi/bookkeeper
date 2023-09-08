@@ -13,10 +13,7 @@ import org.junit.runners.Parameterized;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -129,7 +126,6 @@ public class BookKeeperAdminEntriesStoredTest {
             BookKeeper testClient = new BookKeeper(conf);
             this.ledger = testClient.createLedger(ENS_SIZE, WRITE_QUORUM, ACK_QUORUM, BookKeeper.DigestType.CRC32, "testPassword".getBytes());
             this.ledgerId = ledger.getId();
-
         } catch (IOException | InterruptedException | BKException e) {
             e.printStackTrace();
             Assert.fail("An exception has been thrown while creating a valid ledger");
@@ -194,8 +190,6 @@ public class BookKeeperAdminEntriesStoredTest {
         LedgerManager ledgerManager = LedgerManagerUtils.getHierarchicalLedgerManager(conf, zk);
         this.ledgerManager = ledgerManager;
     }
-
-
 
 
     @BeforeClass

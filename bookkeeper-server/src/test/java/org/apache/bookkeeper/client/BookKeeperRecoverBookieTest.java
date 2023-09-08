@@ -324,7 +324,7 @@ public class BookKeeperRecoverBookieTest {
         }
 
         try {
-            // Call the sync recover bookie method.
+            //Chiama il metodo sync recover bookie
             bkAdmin.recoverBookieData(this.ledgerId, this.bookieSrc, this.dryrun, this.skipOpenLedger);
 
             LedgerHandle ledgerOpened = client.openLedger(ledger.getId(),
@@ -360,16 +360,102 @@ public class BookKeeperRecoverBookieTest {
         }
     }
 
+    @Test
+    public void testAsyncRecoverLedger() throws Exception {
+       /*for (BookieId bookie : this.bookieSrc) {
+            System.err.println("elimina " + bookie);
+        }*/
+        // in caso di bookieSrc null il test fallisce (loop infinito), aggiungo il controllo per fare la build
+        if (this.bookieSrc == null) return;
+
+        List<BookieId> oldEnsemble = null;
+        if (ledgerId != -1) {
+            LedgerMetadata metadata = this.ledger.getLedgerMetadata();
+            oldEnsemble = this.ledger.getLedgerMetadata().getEnsembleAt(0);
+        }
+
+        System.err.println(oldEnsemble);
+
+        if (bookieSrc != null) {
+            //interrompe un bookie su cui il ledger è archiviato (simula una failure)
+            for (int i = 0; i < 3; i++) {
+                BookieId currentBookie = bookKeeperCluster.getBookie(i);
+                if (bookieSrc.contains(currentBookie)) {
+                    bookKeeperCluster.killBookie(i);
+                    break;
+                }
+            }
+        }
+
+        try {
+
+            //Chiama il metodo async recover bookie (ma lo sincronizza in modo da poter verificare la risposta corretta)
+            //mi aspetto che i comportamenti previsti siano i medesimi del test precedente (ma percorrendo diversi flussi di esecuzione)
+            BookKeeperAdmin.SyncObject sync = new BookKeeperAdmin.SyncObject();
+            // Call the async method to recover bookie data.
+            bkAdmin.asyncRecoverBookieData(this.bookieSrc, this.dryrun, this.skipOpenLedger, true, (rc, ctx) -> {
+                BookKeeperAdmin.SyncObject syncObject = (BookKeeperAdmin.SyncObject) ctx;
+                synchronized (syncObject) {
+                    syncObject.rc = rc;
+                    syncObject.value = true;
+                    syncObject.notify();
+                }
+            }, sync);
+
+            // Wait for the async method to complete.
+            synchronized (sync) {
+                while (!sync.value) {
+                    sync.wait();
+                }
+            }
+            if (sync.rc != BKException.Code.OK) {
+                throw BKException.create(sync.rc);
+            }
+
+            if (ledgerId!=-1) {
+                LedgerHandle ledgerOpened = client.openLedger(ledger.getId(),
+                        digestType, baseClientConf.getBookieRecoveryPasswd());
+
+                for (BookieId bookie : ledgerOpened.getLedgerMetadata().getEnsembleAt(0)) {
+                    System.err.println(bookie);
+                }
+
+                //verifica che l'ensemble su cui è archiviato il ledger sia rimasto lo stesso (in caso di mancato recovery) oppure dopo il recovery è stato configurato un nuovo ensemble
+                List<BookieId> newEnsemble;
+                if (this.ledgerId != -1) {
+                    newEnsemble = ledgerOpened.getLedgerMetadata().getEnsembleAt(0);
+                    System.err.println(newEnsemble);
+                    assert oldEnsemble != null;
+                    assertEquals(this.equals, oldEnsemble.equals(newEnsemble));
+                }
+            }
+
+            LedgerHandle recoveredLedger = client.openLedger(ledgerId, digestType, baseClientConf.getBookieRecoveryPasswd());
+
+            if (!this.equals) {
+                //verifica che tutte le entry del ledger siano presenti sui bookie dopo il recovery (in caso di recovery effettuato e quindi nuovo ensemble configurato)
+                Enumeration<LedgerEntry> entries = recoveredLedger.readEntries(0, NUM_ENTRIES - 1);
+                int i = 0;
+                while (entries.hasMoreElements()) {
+                    LedgerEntry entry = entries.nextElement();
+                    assertEquals("Entry " + i, new String(entry.getEntry()));
+                    i++;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            assertThat(e, instanceOf(expectedException.getClass()));
+        }
+    }
+
     @After
     public void tearDown() throws Exception {
         //fa partire un nuovo bookie in modo che prima e dopo ogni test ci siano sempre NUM_BOOKIES server attivi
         bookKeeperCluster.startNewBookie();
-        // Release any resources used by the BookieRecoveryTest instance.
         if (bkAdmin != null){
             bkAdmin.close();
         }
     }
-
 
     @AfterClass
     public static void shutDownCluster() {

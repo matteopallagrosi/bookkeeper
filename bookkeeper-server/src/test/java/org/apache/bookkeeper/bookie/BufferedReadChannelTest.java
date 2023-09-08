@@ -65,7 +65,7 @@ public class BufferedReadChannelTest {
     public static Collection<Object[]> getParameters() {
         return Arrays.asList(new Object[][]{
                 // dest, pos , length, expectedOutput, expectedException, overrideOutput, overrideException
-                {Buffer.SUFFICIENT , 0 , -1 , 0 , null, 0 , null},
+                {Buffer.SUFFICIENT , 0 , -1, 0 , null, 0 , null},
                 {Buffer.SUFFICIENT , 0 , 0 , 0 , null, 0 , null},
                 {Buffer.SUFFICIENT , 0 , NUM_BYTES , NUM_BYTES , null, NUM_BYTES , null},
                 {Buffer.SUFFICIENT , 0 , NUM_BYTES + 1 , NUM_BYTES , null, 0 , new IOException()}, //diverso
@@ -130,6 +130,10 @@ public class BufferedReadChannelTest {
        SUFFICIENT  , NOT_SUFFICIENT , NULL
     }
 
+    enum startPosition {
+        DEFAULT, DIFFERENT
+    }
+
 
     @BeforeClass
     public static void setUpEnvironment() {
@@ -165,6 +169,38 @@ public class BufferedReadChannelTest {
              FileChannel fileChannel = fis.getChannel()) {
 
             BufferedReadChannel readChannel = new BufferedReadChannel(fileChannel, (int) fileChannel.size());
+
+            //testo la read
+            int numRead = readChannel.read(this.dest, this.pos, this.length);
+
+            //testo che il corretto numero di bytes sia stato letto
+            assertEquals(expectedOutput, numRead);
+
+            byte[] actualBytes = null;
+            if (this.dest != null) {
+                actualBytes = new byte[this.dest.readableBytes()];
+                this.dest.readBytes(actualBytes);
+            }
+
+            if (numRead == NUM_BYTES) {
+                //testo che i bytes inseriti siano stati letti correttamente
+                assertArrayEquals(TEST_BYTES, actualBytes);
+            }
+        } catch (Exception e) {
+            assertThat(e, instanceOf(expectedException.getClass()));
+        }
+    }
+
+    //mi aspetto che il comportamento sia il medesimo del test precedente (anche se cambio start position, essendo non superiore all'EOF,
+    //il comportamento previsto è che venga riportata pari alla current position)
+    @Test
+    public void readDifferentStartPositionTest() {
+        try (FileInputStream fis = new FileInputStream(PATH);
+             FileChannel fileChannel = fis.getChannel()) {
+
+            BufferedReadChannel readChannel = new BufferedReadChannel(fileChannel, (int) fileChannel.size());
+
+            readChannel.readBufferStartPosition = 1;
 
             //testo la read
             int numRead = readChannel.read(this.dest, this.pos, this.length);
