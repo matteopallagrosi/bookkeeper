@@ -305,6 +305,25 @@
           </execution>
         </executions>
       </plugin>
+
+      <!--mutation testing-->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.14.4</version>
+        <configuration>
+          <targetClasses>
+            <!--<param>org.apache.bookkeeper.client.BookKeeperAdmin*</param>-->
+            <param>org.apache.bookkeeper.bookie.BufferedReadChannel*</param>
+            <param>org.apache.bookkeeper.bookie.BufferedChannel*</param>
+          </targetClasses>
+          <targetTests>
+            <param>org.apache.bookkeeper.bookie.*</param>
+            <!--<param>org.apache.bookkeeper.client.*</param>-->
+          </targetTests>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
 
