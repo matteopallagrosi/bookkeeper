@@ -191,6 +191,7 @@ public class BufferedReadChannelTest {
         }
     }
 
+    //aggiunta per aumentare coverage
     //mi aspetto che il comportamento sia il medesimo del test precedente (anche se cambio start position, essendo non superiore all'EOF,
     //il comportamento previsto è che venga riportata pari alla current position)
     @Test
